@@ -1,0 +1,205 @@
+﻿@model Site.Models.ColaboradorViewModel
+
+@{
+    ViewBag.Title = "Colaboradores";
+}
+
+<h2>Colaboradores</h2>
+
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(model => model.Codigo)
+
+    <div class="form-horizontal">
+        <h4>Gestão de colaboradores</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Nome, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Nome, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Nome, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Telefone, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Telefone, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Telefone, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.TipoTelefone, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.TipoTelefone, (List<SelectListItem>)ViewBag.ItensCombo, new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.TipoTelefone, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input id="btnGravar" type="button" value="Gravar" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <table class="table table-bordered" id="tabelaColaboradores">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Tipo Telefone</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery.maskedinput/1.4.1/jquery.maskedinput.min.js"></script>
+
+
+    <script type="text/javascript">
+        function GerarLinhasTabela(data) {
+            $('#tabelaColaboradores').find('tbody').empty();
+
+            data.data.forEach((item) => {
+                var linha = '<tr id="' + item.Codigo + '">';
+                linha += '<td style="text-align:center; vertical-align: middle">' + item.Codigo + '</td>';
+                linha += '<td style="text-align:center; vertical-align: middle">' + item.Nome + '</td>';
+                linha += '<td style="text-align:center; vertical-align: middle">' + item.Telefone + '</td>';
+                linha += '<td style="text-align:center; vertical-align: middle">' + item.TipoTelefone + '</td>';
+                linha += '<td>' + '<button class="btn btn-warning" onclick="ModoEdicao(' + item.Codigo + ')">Editar</button>' + '</td>';
+                linha += '<td>' + '<button class="btn btn-danger" onclick="ExcluirRegistro(' + item.Codigo + ')">Excluir</button>' + '</td>';
+                linha += '</tr>';
+
+                $('#tabelaColaboradores').find('tbody').append(linha);
+            });
+        }
+
+        function ModoEdicao(id) {
+            $.ajax({
+                url: '@Url.Action("BuscarPorId", "Home")',
+                type: "POST",
+                data: JSON.stringify({ id:id }),
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        success: function (data) {
+                            var dados = data.data;
+
+                            $('#Codigo').val(id);
+                            $('#Nome').val(dados.Nome);
+                            $('#Telefone').val(dados.Telefone);
+                            $('#TipoTelefone').val(dados.TipoTelefone);
+                        }
+                    });
+        }
+
+        function Listar() {
+            $.ajax({
+                        url: '@Url.Action("Listar","Home")',
+                        type: "POST",
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        success: function (data) {
+                            GerarLinhasTabela(data);
+                        }
+                    });
+        }
+
+        function ExcluirRegistro(id) {
+                if (confirm('Deseja realmente excluir esse registro?')) {
+
+                    $.ajax({
+                        url: '@Url.Action("Excluir","Home")',
+                        type: "POST",
+                        data: JSON.stringify({
+                            id: parseInt(id)
+                        }),
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        success: function (data) {
+                            GerarLinhasTabela(data);
+                        }
+                    });
+                }
+            }
+        $(document).ready(function () {
+
+            $('#Telefone').mask("(99) 9999-9999?9")
+                .focusout(function (event) {
+                    var target, phone, element;
+                    target = (event.currentTarget) ? event.currentTarget : event.srcElement;
+                    phone = target.value.replace(/\D/g, '');
+                    element = $(target);
+                    element.unmask();
+                    if (phone.length > 10) {
+                        element.mask("(99) 99999-999?9");
+                    } else {
+                        element.mask("(99) 9999-9999?9");
+                    }
+                });
+
+            Listar();
+
+            $('#btnGravar').click(function () {
+                /*Modo edição*/
+                if ($('#Codigo').val()) {
+                    $.ajax({
+                        url: '@Url.Action("Alterar","Home")',
+                        type: "POST",
+                        data: JSON.stringify({
+                            Codigo: $('#Codigo').val(),
+                            Nome: $('#Nome').val(),
+                            Telefone: $('#Telefone').val(),
+                            TipoTelefone: $('#TipoTelefone').val()
+                        }),
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        success: function (data) {
+                            GerarLinhasTabela(data);
+                            $('#Codigo').val('');
+                            $('#Nome').val('');
+                            $('#Telefone').val('');
+                            $('#TipoTelefone').val('');
+                        }
+                    });
+                }
+                else {
+                    $.ajax({
+                        url: '@Url.Action("Cadastrar","Home")',
+                        type: "POST",
+                        data: JSON.stringify({
+                            Nome: $('#Nome').val(),
+                            Telefone: $('#Telefone').val(),
+                            TipoTelefone: $('#TipoTelefone').val()
+                        }),
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        success: function (data) {
+                            GerarLinhasTabela(data);
+                            $('#Nome').val('');
+                            $('#Telefone').val('');
+                            $('#TipoTelefone').val('');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}
